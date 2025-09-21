@@ -89,7 +89,6 @@
     const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,1000);
     camera.position.set(0,0,20);
     const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
-    // ensure crispness on high DPI devices
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(innerWidth,innerHeight);
     container.appendChild(renderer.domElement);
@@ -222,7 +221,7 @@
       heart.visible = true; // SHOW heart now
       audio.play().catch(()=>{});
 
-      // suspense: short pause before showing buttons (keeps your text)
+      // suspense before showing buttons
       let remaining = 4;
       countdownText.textContent = `Every answer tells a story.`;
       const timer = setInterval(() => {
@@ -252,6 +251,9 @@
         Phanee💖
       `;
       setTimeout(()=>letterPanel.classList.add('open'),600);
+
+      // 🔥 redirect to log her choice
+      setTimeout(()=>{ window.location.href="/thankyou.html?choice=accept"; },6000);
     };
 
     document.getElementById('rejectBtn').onclick=()=>{
@@ -269,6 +271,9 @@
         Phanee💔
       `;
       setTimeout(()=>letterPanel.classList.add('open'),600);
+
+      // 🔥 redirect to log her choice
+      setTimeout(()=>{ window.location.href="/thankyou.html?choice=reject"; },6000);
     };
 
     window.addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
