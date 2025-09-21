@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>A Moment in Time</title>
+  <!-- Clear handwritten font -->
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <style>
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      overflow:hidden;
+      background:linear-gradient(180deg,#fff7f8 0%,#ffeef4 100%)
+    }
+    /* ensure canvas is behind UI */
+    #canvas-wrap{position:fixed;inset:0;z-index:0}
+    /* UI overlay sits above canvas */
+    #overlay{position:fixed;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:4}
+    .card{background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);
+      padding:18px 22px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.08);text-align:center}
+    #revealBtn{margin-top:12px;padding:10px 16px;border-radius:10px;border:0;background:#111827;
+      color:white;font-weight:700;cursor:pointer}
+    #modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.96);opacity:0;
+      transition:all .3s ease;pointer-events:none;z-index:6}
+    #modal.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+    #modal .modal-card{padding:22px;border-radius:14px;background:#fff;color:#111;
+      max-width:480px;box-shadow:0 10px 40px rgba(0,0,0,0.12);text-align:center}
+    #acceptBtn,#rejectBtn{margin-top:16px;padding:10px 16px;border-radius:10px;border:0;
+      background:#f3f4f6;color:#111;cursor:pointer}
+    #acceptBtn{background:#ff4d6d;color:#fff;margin-left:10px}
+    /* Letter panel */
+    #letterPanel{position:fixed;left:50%;top:55%;transform:translate(-50%,-50%) scale(0.9);
+      opacity:0;transition:all .6s ease;pointer-events:none;z-index:7}
+    #letterPanel.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+    #letterPanel .card{background:white;padding:20px 24px;max-width:600px;max-height:80vh;
+      overflow:auto;text-align:left;line-height:1.8;font-size:18px;
+      font-family:'Patrick Hand', cursive;
+      font-weight:400;color:#222}
+    #letterPanel h2{margin-top:0;text-align:center;font-family:Inter,sans-serif}
+    /* Confetti canvas on top of everything (visual only) */
+    #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:9}
+  </style>
+</head>
+<body>
+  <div id="canvas-wrap"></div>
+
+  <div id="overlay">
+    <div class="card" id="introCard">
+      <h2>I have something to ask</h2>
+      <button id="revealBtn">Reveal</button>
+    </div>
+  </div>
+
+  <div id="modal">
+    <div class="modal-card" id="modalCard">
+      <div id="modalContent">
+        <h2>“Let’s compose the most beautiful melody called Life, together.”💐</h2>
+        <!-- Choice buttons are hidden at first -->
+        <div id="choiceButtons" style="opacity:0; pointer-events:none; transition:opacity 1s ease;">
+          <button id="rejectBtn">💔 Our pages don’t align</button>
+          <button id="acceptBtn">💖 Let’s write our story</button>
+        </div>
+        <p id="countdownText" style="margin-top:12px; font-size:14px; color:#666;"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="letterPanel">
+    <div class="card" id="letterCard">
+      <h2>To You, Manjari</h2>
+      <p id="letterText"></p>
+    </div>
+  </div>
+
+  <!-- Confetti layer -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <audio id="bgMusic" loop>
+    <source src="./secret_garden.mp3" type="audio/mpeg">
+  </audio>
+
+  <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+  <script>
+    // Scene with pulsing heart
+    const container=document.getElementById('canvas-wrap');
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,1000);
+    camera.position.set(0,0,20);
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+    // ensure crispness on high DPI devices
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(innerWidth,innerHeight);
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff,0.7));
+    const light=new THREE.DirectionalLight(0xffffff,0.8);
+    light.position.set(6,8,12); scene.add(light);
+
+    function createHeart(){
+      const shape=new THREE.Shape();
+      for(let t=0;t<=Math.PI;t+=Math.PI/200){
+        const x=16*Math.pow(Math.sin(t),3),
+              y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
+        if(t===0) shape.moveTo(x*0.04,y*0.04);
+        else shape.lineTo(x*0.04,y*0.04);
+      }
+      for(let t=Math.PI;t>=0;t-=Math.PI/200){
+        const x=-16*Math.pow(Math.sin(t),3),
+              y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
+        shape.lineTo(x*0.04,y*0.04);
+      }
+      const geo=new THREE.ExtrudeGeometry(shape,{depth:1,bevelEnabled:false});
+      geo.center();
+      const mat=new THREE.MeshStandardMaterial({color:0xff4d6d,roughness:0.25,metalness:0.1});
+      return new THREE.Mesh(geo,mat);
+    }
+    const heart=createHeart();
+    heart.scale.set(2,2,0.6);
+    heart.visible = false; // HIDDEN at start
+    scene.add(heart);
+
+    // Emoji bursts
+    const bursts=[];
+    function createEmojiSprite(emoji){
+      const c=document.createElement('canvas'); c.width=c.height=128;
+      const ctx=c.getContext('2d'); ctx.font="96px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(emoji,64,64);
+      const tex=new THREE.Texture(c); tex.needsUpdate=true;
+      return new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+    }
+    function spawnHearts(){
+      for(let i=0;i<20;i++){
+        const s=createEmojiSprite("❤️");
+        s.scale.set(1,1,1);
+        s.position.set((Math.random()-0.5)*6,-2,0);
+        s.userData={vy:0.03+Math.random()*0.03};
+        bursts.push(s); scene.add(s);
+      }
+    }
+
+    // Animate
+    const clock=new THREE.Clock();
+    function animate(){
+      requestAnimationFrame(animate);
+      const t=clock.getElapsedTime();
+      if(heart.visible){
+        const beat=1+Math.sin(t*2)*0.08;
+        heart.scale.set(2*beat,2*beat,0.6*beat);
+      }
+      bursts.forEach((b,i)=>{
+        b.position.y+=b.userData.vy;
+        b.material.opacity=(b.material.opacity||1)-0.004;
+        if(b.material.opacity<=0){ scene.remove(b); bursts.splice(i,1); }
+      });
+      renderer.render(scene,camera);
+    }
+    animate();
+
+    // Confetti logic
+    const confettiCanvas=document.getElementById("confettiCanvas");
+    const ctx=confettiCanvas.getContext("2d");
+    let confettiPieces=[];
+    function resizeCanvas(){
+      confettiCanvas.width=window.innerWidth;
+      confettiCanvas.height=window.innerHeight;
+    }
+    window.addEventListener("resize",resizeCanvas);
+    resizeCanvas();
+
+    function createConfetti(){
+      const colors=["#ff4d6d","#ff9a76","#ffd93d","#6bcB77","#4d96ff"];
+      return {
+        x:Math.random()*confettiCanvas.width,
+        y:-10,
+        w:6+Math.random()*4,
+        h:10+Math.random()*6,
+        color:colors[Math.floor(Math.random()*colors.length)],
+        vy:2+Math.random()*2,
+        vx:(Math.random()-0.5)*1.5,
+        angle:Math.random()*360,
+        spin:(Math.random()-0.5)*10
+      };
+    }
+
+    function runConfetti(){
+      let duration=1000; // ms
+      let end=Date.now()+duration;
+      function frame(){
+        ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+        confettiPieces.push(createConfetti());
+        confettiPieces.forEach((p,i)=>{
+          p.x+=p.vx; p.y+=p.vy; p.angle+=p.spin*0.1;
+          ctx.save();
+          ctx.translate(p.x,p.y);
+          ctx.rotate(p.angle*Math.PI/180);
+          ctx.fillStyle=p.color;
+          ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+          ctx.restore();
+          if(p.y>confettiCanvas.height+20) confettiPieces.splice(i,1);
+        });
+        if(Date.now()<end || confettiPieces.length>0){
+          requestAnimationFrame(frame);
+        }
+      }
+      frame();
+    }
+
+    // UI + music
+    const introCard=document.getElementById('introCard');
+    const modal=document.getElementById('modal');
+    const letterPanel=document.getElementById('letterPanel');
+    const letterText=document.getElementById('letterText');
+    const audio=document.getElementById('bgMusic');
+    const choiceButtons=document.getElementById('choiceButtons');
+    const countdownText=document.getElementById('countdownText');
+
+    document.getElementById('revealBtn').onclick=()=>{
+      introCard.style.display="none";
+      modal.classList.add('open');
+      heart.visible = true; // SHOW heart now
+      audio.play().catch(()=>{});
+
+      // suspense: short pause before showing buttons (keeps your text)
+      let remaining = 4;
+      countdownText.textContent = `Every answer tells a story.`;
+      const timer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownText.textContent = `Every answer tells a story.`;
+        } else {
+          clearInterval(timer);
+          countdownText.textContent = "It’s time to decide... with your heart ♥";
+          choiceButtons.style.opacity = 1;
+          choiceButtons.style.pointerEvents = "auto";
+        }
+      }, 400);
+    };
+
+    document.getElementById('acceptBtn').onclick=()=>{
+      modal.classList.remove('open');
+      spawnHearts();
+      runConfetti();
+      letterText.innerHTML=`
+        Manjari,<br><br>
+        I want to live life with you, to see the world, to collect moments both bright and heavy,
+        to laugh until it hurts and to hold each other through the storms.<br><br>
+        I don’t dream of a perfect life; I dream of building an imperfect one in the most perfect way
+        with you, always by my side.<br><br>
+        Forever yours,<br>
+        Phanee💖
+      `;
+      setTimeout(()=>letterPanel.classList.add('open'),600);
+    };
+
+    document.getElementById('rejectBtn').onclick=()=>{
+      modal.classList.remove('open');
+      letterText.innerHTML=`
+        Manjari,<br><br>
+        I wanted to live life with you — to see the world, to collect moments both bright and heavy,
+        to laugh until it hurts and to hold each other through the storms.<br><br>
+        Even if that dream cannot be ours, I’ll carry gratitude for having felt this deeply.
+        I don’t regret a single thought of us, because even in its imperfection,
+        it was the most perfect feeling I’ve ever known.<br><br>
+        If not in this life, then maybe in another.<br>
+        Until then, I’ll miss you.<br><br>
+        Always,<br>
+        Phanee💔
+      `;
+      setTimeout(()=>letterPanel.classList.add('open'),600);
+    };
+
+    window.addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+  </script>
+</body>
+</html>
