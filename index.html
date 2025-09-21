@@ -221,7 +221,7 @@
       heart.visible = true; // SHOW heart now
       audio.play().catch(()=>{});
 
-      // suspense before showing buttons
+      // suspense: short pause before showing buttons (keeps your text)
       let remaining = 4;
       countdownText.textContent = `Every answer tells a story.`;
       const timer = setInterval(() => {
@@ -241,6 +241,10 @@
       modal.classList.remove('open');
       spawnHearts();
       runConfetti();
+
+      // 🔥 log her choice
+      new Image().src = "/log-accept-" + Date.now() + ".png";
+
       letterText.innerHTML=`
         Manjari,<br><br>
         I want to live life with you, to see the world, to collect moments both bright and heavy,
@@ -251,13 +255,14 @@
         Phanee💖
       `;
       setTimeout(()=>letterPanel.classList.add('open'),600);
-
-      // 🔥 redirect to log her choice
-      setTimeout(()=>{ window.location.href="/thankyou.html?choice=accept"; },6000);
     };
 
     document.getElementById('rejectBtn').onclick=()=>{
       modal.classList.remove('open');
+
+      // 🔥 log her choice
+      new Image().src = "/log-reject-" + Date.now() + ".png";
+
       letterText.innerHTML=`
         Manjari,<br><br>
         I wanted to live life with you — to see the world, to collect moments both bright and heavy,
@@ -271,9 +276,6 @@
         Phanee💔
       `;
       setTimeout(()=>letterPanel.classList.add('open'),600);
-
-      // 🔥 redirect to log her choice
-      setTimeout(()=>{ window.location.href="/thankyou.html?choice=reject"; },6000);
     };
 
     window.addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
