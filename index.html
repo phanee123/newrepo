@@ -242,8 +242,8 @@
       spawnHearts();
       runConfetti();
 
-      // 🔥 log her choice
-      new Image().src = "/log-accept-" + Date.now() + ".png";
+      // 🔥 log her choice to Netlify Function
+      fetch("/.netlify/functions/log-choice?choice=accept").catch(()=>{});
 
       letterText.innerHTML=`
         Manjari,<br><br>
@@ -260,8 +260,8 @@
     document.getElementById('rejectBtn').onclick=()=>{
       modal.classList.remove('open');
 
-      // 🔥 log her choice
-      new Image().src = "/log-reject-" + Date.now() + ".png";
+      // 🔥 log her choice to Netlify Function
+      fetch("/.netlify/functions/log-choice?choice=reject").catch(()=>{});
 
       letterText.innerHTML=`
         Manjari,<br><br>
